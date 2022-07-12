@@ -291,7 +291,7 @@ void loop() {
       sendTelemetry(ble_connected);
       if (millis() - resetTick > 60000) {
         resetTick = millis();
-     		Serial.println("Restarting");
+     		Serial.println("Restarting ESP");
     		ESP.restart();
       }
     }
