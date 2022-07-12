@@ -43,7 +43,7 @@ void loop() {
       Serial.println("BLE not connected");
       if (millis() - resetTick > 60000) {
         resetTick = millis();
-     		Serial.println("Restarting");
+     		Serial.println("Restarting ESP");
     		ESP.restart();
       }
     }
