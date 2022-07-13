@@ -256,7 +256,7 @@ void loop() {
 	TIMERG0.wdt_wprotect=TIMG_WDT_WKEY_VALUE;
 	TIMERG0.wdt_feed=1;
 	TIMERG0.wdt_wprotect=0;
-	//ArduinoOTA.handle();
+	ArduinoOTA.handle();
 
   static long mouseTick = millis();
   static long resetTick = millis();
