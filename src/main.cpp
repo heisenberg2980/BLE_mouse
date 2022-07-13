@@ -33,6 +33,7 @@ BleMouse bleMouse(deviceName " " room, deviceName " enterprise", 100);
 bool sendTelemetry(int ble_connected = -1) {
 	StaticJsonDocument<256> tele;
 	tele["room"] = room;
+	tele["ssid"] = ssid;
 	tele["ip"] = localIp;
 	tele["hostname"] = WiFi.getHostname();
 
