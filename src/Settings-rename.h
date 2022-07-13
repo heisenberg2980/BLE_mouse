@@ -1,5 +1,5 @@
 //Replace with the name of the mouse
-#define deviceName "my BT mouse"
+#define deviceName "My BT mouse"
 #define deviceNameNoSpaces "my_BT_mouse"
 
 //Replace with the room name where the node will be placed; example: #define room "living-room"
@@ -15,7 +15,7 @@
 #define password "12345678"
 
 //Replace with a human-friendly host name. Must not contain spaces or special characters and be unique on your network
-#define hostname "esp32_unicorn_mouse_" room
+#define hostname "esp32_" deviceNameNoSpaces "_" room
 
 //Replace with your MQTT Broker address; example: #define mqttHost IPAddress(192, 168, 1, 195)
 #define mqttHost IPAddress(192, 168, 1, 195)
