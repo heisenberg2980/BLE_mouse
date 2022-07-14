@@ -11,7 +11,6 @@ extern "C" {
 
 #include <BleMouse.h>
 #include <WiFi.h>
-#include <AsyncTCP.h>
 #include <AsyncMqttClient.h>
 #include <ArduinoJson.h>
 #include <ArduinoOTA.h>
@@ -259,44 +258,48 @@ void loop() {
 	TIMERG0.wdt_wprotect=0;
 	ArduinoOTA.handle();
 
-  static long mouseTick = millis();
-  static long resetTick = millis();
-  static int ble_connected;
+	unsigned long mouseTick = millis();
+	unsigned long resetTick = millis();
+	static int ble_connected;
+	static bool firstIterationConnected = true;
+	static bool firstIterationNotConnected = true;
 
-  if(bleMouse.isConnected()) {
+	if(bleMouse.isConnected()) {
 
-    ble_connected = 1;
-		sendTelemetry(ble_connected);
+		if ((millis() - mouseTick > 60000) or firstIterationConnected) {
+			firstIterationConnected = false;
+			firstIterationNotConnected = true;
+			ble_connected = 1;
+			sendTelemetry(ble_connected);
 
-    Serial.println("Move mouse pointer up");
-    bleMouse.move(0,-1);
-    //digitalWrite(LED_BUILTIN, LOW); 
-    delay(1000);
+			Serial.println("Move mouse pointer up");
+			bleMouse.move(0,-1);
+			//digitalWrite(LED_BUILTIN, LOW); 
+			delay(1000);
 
-    Serial.println("Move mouse pointer down");
-    bleMouse.move(0,1);
-    //digitalWrite(LED_BUILTIN, HIGH);  
+			Serial.println("Move mouse pointer down");
+			bleMouse.move(0,1);
+			//digitalWrite(LED_BUILTIN, HIGH);  
 
-    delay(60000);
-    mouseTick = millis();
-    resetTick = millis();
-
-  }
-  else {
-    //digitalWrite(LED_BUILTIN, LOW); 
-    //delay(60000);
-    if (millis() - mouseTick > 10000) {
-      mouseTick = millis();
-      Serial.println("BLE not connected");
-      ble_connected = 0;
-      sendTelemetry(ble_connected);
-      if (millis() - resetTick > 60000) {
-        resetTick = millis();
-     		Serial.println("Restarting ESP");
-    		ESP.restart();
-      }
-    }
-    //digitalWrite(LED_BUILTIN, HIGH);  
-    //delay(120000);
-  }
+			mouseTick = millis();
+			resetTick = millis();
+		}
+	}
+	else {
+		//digitalWrite(LED_BUILTIN, LOW); 
+		if ((millis() - mouseTick > 10000) or firstIterationNotConnected) {
+			firstIterationNotConnected = false;
+			firstIterationConnected = true;
+			mouseTick = millis();
+			Serial.println("BLE not connected");
+			ble_connected = 0;
+			sendTelemetry(ble_connected);
+			if (millis() - resetTick > 60000) {
+				resetTick = millis();
+				Serial.println("Restarting ESP");
+				ESP.restart();
+			}
+		}
+		//digitalWrite(LED_BUILTIN, HIGH);  
+	}
 }
