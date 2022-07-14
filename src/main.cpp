@@ -258,8 +258,8 @@ void loop() {
 	TIMERG0.wdt_wprotect=0;
 	ArduinoOTA.handle();
 
-	unsigned long mouseTick = millis();
-	unsigned long resetTick = millis();
+	static unsigned long mouseTick = millis();
+	static unsigned long resetTick = millis();
 	static int ble_connected;
 	static bool firstIterationConnected = true;
 	static bool firstIterationNotConnected = true;
