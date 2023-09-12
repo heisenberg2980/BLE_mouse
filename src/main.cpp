@@ -28,8 +28,10 @@ byte retryAttemptsWifi = 0;
 byte retryAttemptsMqtt = 0;
 
 const long  gmtOffset_sec = 3600;
-const int   daylightOffset_sec = 3600;
-const char* ntpServer = "pool.ntp.org";
+const int   daylightOffset_sec = 0;
+const char* ntpServer = "192.168.0.221";
+time_t timestamp;
+time_t currentTimestamp;
 
 //BleMouse bleMouse;
 BleMouse bleMouse(deviceName " " room, deviceName " enterprise", 100);
@@ -237,14 +239,16 @@ void configureOTA() {
   ArduinoOTA.begin();
 }
 
-void printLocalTime()
+void getTime()
 {
   struct tm timeinfo;
   if(!getLocalTime(&timeinfo)){
     Serial.println("Failed to obtain time");
     return;
   }
-  Serial.println(&timeinfo, "%A, %B %d %Y %H:%M:%S");
+  //Serial.println(&timeinfo, "%A, %B %d %Y %H:%M:%S");
+  timestamp = mktime(&timeinfo);
+
 }
 
 void setup() {
@@ -267,7 +271,7 @@ void setup() {
 
   //init and get the time
   configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
-  printLocalTime();
+  getTime();
 
 }
 
@@ -280,14 +284,29 @@ void loop() {
 
 	static unsigned long mouseTick = millis();
 	static unsigned long resetTick = millis();
-	static unsigned long displayTime = millis();
+	static unsigned long ntpTime = millis();
+	static unsigned long runningTime = millis();
 	static int ble_connected;
 	static bool firstIterationConnected = true;
 	static bool firstIterationNotConnected = true;
 
-	if (millis() - displayTime > 1000) {
-	    printLocalTime();
-		displayTime = millis();
+	if ((timestamp < 1000000000) or (millis() - ntpTime > 86400)) {
+	    getTime();
+		Serial.print("Time updated from server");
+		ntpTime = millis();
+	}
+
+	if (millis() - runningTime > 10000) {
+		currentTimestamp = timestamp + (millis()/1000);
+		struct tm *timeinfo = localtime((time_t*)&currentTimestamp);
+		int hour = timeinfo->tm_hour;
+		int minute = timeinfo->tm_min;
+		int second = timeinfo->tm_sec;
+		Serial.print("Current Timestamp: ");
+		Serial.println(currentTimestamp);
+		Serial.print("Time from timestamp: ");
+		Serial.println(String(hour) + ":" + String(minute) + ":" + String(second));
+		runningTime = millis();
 	}
 
 	if(bleMouse.isConnected()) {
