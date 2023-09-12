@@ -15,6 +15,7 @@ extern "C" {
 #include <ArduinoJson.h>
 #include <ArduinoOTA.h>
 #include "Settings.h"
+#include "time.h"
 
 #define LED_GPIO LED_BUILTIN  
 
@@ -25,6 +26,10 @@ bool updateInProgress = false;
 String localIp;
 byte retryAttemptsWifi = 0;
 byte retryAttemptsMqtt = 0;
+
+const long  gmtOffset_sec = 3600;
+const int   daylightOffset_sec = 3600;
+const char* ntpServer = "pool.ntp.org";
 
 //BleMouse bleMouse;
 BleMouse bleMouse(deviceName " " room, deviceName " enterprise", 100);
@@ -232,6 +237,16 @@ void configureOTA() {
   ArduinoOTA.begin();
 }
 
+void printLocalTime()
+{
+  struct tm timeinfo;
+  if(!getLocalTime(&timeinfo)){
+    Serial.println("Failed to obtain time");
+    return;
+  }
+  Serial.println(&timeinfo, "%A, %B %d %Y %H:%M:%S");
+}
+
 void setup() {
   Serial.begin(115200);
   Serial.println("Starting BLE work!");
@@ -248,7 +263,12 @@ void setup() {
 
   connectToWifi();
 
-	configureOTA();
+  configureOTA();
+
+  //init and get the time
+  configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
+  printLocalTime();
+
 }
 
 void loop() {
@@ -260,9 +280,15 @@ void loop() {
 
 	static unsigned long mouseTick = millis();
 	static unsigned long resetTick = millis();
+	static unsigned long displayTime = millis();
 	static int ble_connected;
 	static bool firstIterationConnected = true;
 	static bool firstIterationNotConnected = true;
+
+	if (millis() - displayTime > 1000) {
+	    printLocalTime();
+		displayTime = millis();
+	}
 
 	if(bleMouse.isConnected()) {
 
