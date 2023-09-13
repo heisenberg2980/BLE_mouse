@@ -293,7 +293,7 @@ void loop() {
 
 	static unsigned long mouseTick = millis();
 	static unsigned long resetTick = millis();
-	static unsigned long ntpTime = millis();
+//	static unsigned long ntpTime = millis();
 	static unsigned long runningTime = millis();
 	static int ble_connected;
 	static bool firstIterationConnected = true;
@@ -304,7 +304,7 @@ void loop() {
 		Serial.println("Time updated from server");
 //		Serial.println(timestamp);
 //		Serial.println(millis() - ntpTime);
-		ntpTime = millis();
+//		ntpTime = millis();
 	}
 
 	if (millis() - runningTime > 10000) {
