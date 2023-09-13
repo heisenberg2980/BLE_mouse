@@ -15,6 +15,7 @@ extern "C" {
 #include <ArduinoJson.h>
 #include <ArduinoOTA.h>
 #include "Settings.h"
+#include "time.h"
 
 #define LED_GPIO LED_BUILTIN  
 
@@ -25,6 +26,17 @@ bool updateInProgress = false;
 String localIp;
 byte retryAttemptsWifi = 0;
 byte retryAttemptsMqtt = 0;
+
+const long  gmtOffset_sec = 3600;
+const int   daylightOffset_sec = 0;
+const char* ntpServer = "192.168.0.221";
+time_t timestamp;
+time_t currentTimestamp;
+int day;
+int hour;
+int minute;
+int second;
+bool workingTime = false;
 
 //BleMouse bleMouse;
 BleMouse bleMouse(deviceName " " room, deviceName " enterprise", 100);
@@ -40,6 +52,10 @@ bool sendTelemetry(int ble_connected = -1) {
 		Serial.printf("connected: %d\n\r",ble_connected);
     tele["BLE_connected"] = ble_connected;
 	}
+
+	tele["Working time"] = workingTime;
+	tele["Day"] = (String(day));
+	tele["Time"] = (String(hour) + ":" + String(minute) + ":" + String(second));
 
 	char teleMessageBuffer[258];
 	serializeJson(tele, teleMessageBuffer);
@@ -232,6 +248,18 @@ void configureOTA() {
   ArduinoOTA.begin();
 }
 
+void getTime()
+{
+  struct tm timeinfo;
+  if(!getLocalTime(&timeinfo)){
+    Serial.println("Failed to obtain time");
+    return;
+  }
+  //Serial.println(&timeinfo, "%A, %B %d %Y %H:%M:%S");
+  timestamp = mktime(&timeinfo);
+
+}
+
 void setup() {
   Serial.begin(115200);
   Serial.println("Starting BLE work!");
@@ -248,7 +276,12 @@ void setup() {
 
   connectToWifi();
 
-	configureOTA();
+  configureOTA();
+
+  //init and get the time
+  configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
+  getTime();
+
 }
 
 void loop() {
@@ -260,46 +293,79 @@ void loop() {
 
 	static unsigned long mouseTick = millis();
 	static unsigned long resetTick = millis();
+	static unsigned long ntpTime = millis();
+	static unsigned long runningTime = millis();
 	static int ble_connected;
 	static bool firstIterationConnected = true;
 	static bool firstIterationNotConnected = true;
 
-	if(bleMouse.isConnected()) {
+	if ((timestamp < 1000000000) or (millis() - ntpTime > 86400)) {
+	    getTime();
+		Serial.print("Time updated from server");
+		ntpTime = millis();
+	}
 
-		if ((millis() - mouseTick > 60000) or firstIterationConnected) {
-			firstIterationConnected = false;
-			firstIterationNotConnected = true;
-			ble_connected = 1;
-			sendTelemetry(ble_connected);
+	if (millis() - runningTime > 10000) {
+		currentTimestamp = timestamp + (millis()/1000);
+		struct tm *timeinfo = localtime((time_t*)&currentTimestamp);
+		day = timeinfo->tm_wday;
+		hour = timeinfo->tm_hour;
+		minute = timeinfo->tm_min;
+		second = timeinfo->tm_sec;
+//		Serial.print("Current Timestamp: ");
+//		Serial.println(currentTimestamp);
+//		Serial.print("Time from timestamp: ");
+//		Serial.println(String(day) + ", " + String(hour) + ":" + String(minute) + ":" + String(second));
+		runningTime = millis();
+	}
+	if (day>=1 and day<=5 and hour>=8 and hour<18) {
 
-			Serial.println("Move mouse pointer up");
-			bleMouse.move(0,-1);
+		workingTime = true;
+
+		if(bleMouse.isConnected()) {
+
+			if ((millis() - mouseTick > 60000) or firstIterationConnected) {
+				firstIterationConnected = false;
+				firstIterationNotConnected = true;
+				ble_connected = 1;
+				sendTelemetry(ble_connected);
+
+				Serial.println("Move mouse pointer up");
+				bleMouse.move(0,-1);
+				//digitalWrite(LED_BUILTIN, LOW); 
+				delay(1000);
+
+				Serial.println("Move mouse pointer down");
+				bleMouse.move(0,1);
+				//digitalWrite(LED_BUILTIN, HIGH);  
+
+				mouseTick = millis();
+				resetTick = millis();
+			}
+		}
+		else {
 			//digitalWrite(LED_BUILTIN, LOW); 
-			delay(1000);
-
-			Serial.println("Move mouse pointer down");
-			bleMouse.move(0,1);
+			if ((millis() - mouseTick > 10000) or firstIterationNotConnected) {
+				firstIterationNotConnected = false;
+				firstIterationConnected = true;
+				mouseTick = millis();
+				Serial.println("BLE not connected");
+				ble_connected = 0;
+				sendTelemetry(ble_connected);
+				if (millis() - resetTick > 60000) {
+					resetTick = millis();
+					Serial.println("Restarting ESP");
+					ESP.restart();
+				}
+			}
 			//digitalWrite(LED_BUILTIN, HIGH);  
-
-			mouseTick = millis();
-			resetTick = millis();
 		}
 	}
 	else {
-		//digitalWrite(LED_BUILTIN, LOW); 
-		if ((millis() - mouseTick > 10000) or firstIterationNotConnected) {
-			firstIterationNotConnected = false;
-			firstIterationConnected = true;
-			mouseTick = millis();
-			Serial.println("BLE not connected");
-			ble_connected = 0;
+		if (millis() - mouseTick > 60000) {
+			workingTime = false;
 			sendTelemetry(ble_connected);
-			if (millis() - resetTick > 60000) {
-				resetTick = millis();
-				Serial.println("Restarting ESP");
-				ESP.restart();
-			}
+			mouseTick = millis();
 		}
-		//digitalWrite(LED_BUILTIN, HIGH);  
 	}
 }
