@@ -32,6 +32,11 @@ const int   daylightOffset_sec = 0;
 const char* ntpServer = "192.168.0.221";
 time_t timestamp;
 time_t currentTimestamp;
+int day;
+int hour;
+int minute;
+int second;
+bool workingTime = false;
 
 //BleMouse bleMouse;
 BleMouse bleMouse(deviceName " " room, deviceName " enterprise", 100);
@@ -47,6 +52,10 @@ bool sendTelemetry(int ble_connected = -1) {
 		Serial.printf("connected: %d\n\r",ble_connected);
     tele["BLE_connected"] = ble_connected;
 	}
+
+	tele["Working time"] = workingTime;
+	tele["Day"] = (String(day));
+	tele["Time"] = (String(hour) + ":" + String(minute) + ":" + String(second));
 
 	char teleMessageBuffer[258];
 	serializeJson(tele, teleMessageBuffer);
@@ -299,52 +308,64 @@ void loop() {
 	if (millis() - runningTime > 10000) {
 		currentTimestamp = timestamp + (millis()/1000);
 		struct tm *timeinfo = localtime((time_t*)&currentTimestamp);
-		int hour = timeinfo->tm_hour;
-		int minute = timeinfo->tm_min;
-		int second = timeinfo->tm_sec;
-		Serial.print("Current Timestamp: ");
-		Serial.println(currentTimestamp);
-		Serial.print("Time from timestamp: ");
-		Serial.println(String(hour) + ":" + String(minute) + ":" + String(second));
+		day = timeinfo->tm_wday;
+		hour = timeinfo->tm_hour;
+		minute = timeinfo->tm_min;
+		second = timeinfo->tm_sec;
+//		Serial.print("Current Timestamp: ");
+//		Serial.println(currentTimestamp);
+//		Serial.print("Time from timestamp: ");
+//		Serial.println(String(day) + ", " + String(hour) + ":" + String(minute) + ":" + String(second));
 		runningTime = millis();
 	}
+	if (day>=1 and day<=5 and hour>=8 and hour<18) {
 
-	if(bleMouse.isConnected()) {
+		workingTime = true;
 
-		if ((millis() - mouseTick > 60000) or firstIterationConnected) {
-			firstIterationConnected = false;
-			firstIterationNotConnected = true;
-			ble_connected = 1;
-			sendTelemetry(ble_connected);
+		if(bleMouse.isConnected()) {
 
-			Serial.println("Move mouse pointer up");
-			bleMouse.move(0,-1);
+			if ((millis() - mouseTick > 60000) or firstIterationConnected) {
+				firstIterationConnected = false;
+				firstIterationNotConnected = true;
+				ble_connected = 1;
+				sendTelemetry(ble_connected);
+
+				Serial.println("Move mouse pointer up");
+				bleMouse.move(0,-1);
+				//digitalWrite(LED_BUILTIN, LOW); 
+				delay(1000);
+
+				Serial.println("Move mouse pointer down");
+				bleMouse.move(0,1);
+				//digitalWrite(LED_BUILTIN, HIGH);  
+
+				mouseTick = millis();
+				resetTick = millis();
+			}
+		}
+		else {
 			//digitalWrite(LED_BUILTIN, LOW); 
-			delay(1000);
-
-			Serial.println("Move mouse pointer down");
-			bleMouse.move(0,1);
+			if ((millis() - mouseTick > 10000) or firstIterationNotConnected) {
+				firstIterationNotConnected = false;
+				firstIterationConnected = true;
+				mouseTick = millis();
+				Serial.println("BLE not connected");
+				ble_connected = 0;
+				sendTelemetry(ble_connected);
+				if (millis() - resetTick > 60000) {
+					resetTick = millis();
+					Serial.println("Restarting ESP");
+					ESP.restart();
+				}
+			}
 			//digitalWrite(LED_BUILTIN, HIGH);  
-
-			mouseTick = millis();
-			resetTick = millis();
 		}
 	}
 	else {
-		//digitalWrite(LED_BUILTIN, LOW); 
-		if ((millis() - mouseTick > 10000) or firstIterationNotConnected) {
-			firstIterationNotConnected = false;
-			firstIterationConnected = true;
-			mouseTick = millis();
-			Serial.println("BLE not connected");
-			ble_connected = 0;
+		if (millis() - mouseTick > 60000) {
+			workingTime = false;
 			sendTelemetry(ble_connected);
-			if (millis() - resetTick > 60000) {
-				resetTick = millis();
-				Serial.println("Restarting ESP");
-				ESP.restart();
-			}
+			mouseTick = millis();
 		}
-		//digitalWrite(LED_BUILTIN, HIGH);  
 	}
 }
