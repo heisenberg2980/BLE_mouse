@@ -299,9 +299,11 @@ void loop() {
 	static bool firstIterationConnected = true;
 	static bool firstIterationNotConnected = true;
 
-	if ((timestamp < 1000000000) or (millis() - ntpTime > 86400)) {
+	if ((timestamp < 1000000000)){ // or (millis() - ntpTime > 8640000)) {
 	    getTime();
-		Serial.print("Time updated from server");
+		Serial.println("Time updated from server");
+//		Serial.println(timestamp);
+//		Serial.println(millis() - ntpTime);
 		ntpTime = millis();
 	}
 
