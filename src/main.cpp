@@ -56,6 +56,7 @@ bool sendTelemetry(int ble_connected = -1) {
 	tele["Working time"] = workingTime;
 	tele["Day"] = (String(day));
 	tele["Time"] = (String(hour) + ":" + String(minute) + ":" + String(second));
+	tele["Uptime"] = (String(millis()/1000) + "s");
 
 	char teleMessageBuffer[258];
 	serializeJson(tele, teleMessageBuffer);
