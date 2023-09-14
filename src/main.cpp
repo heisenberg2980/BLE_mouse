@@ -321,7 +321,7 @@ void loop() {
 //		Serial.println(String(day) + ", " + String(hour) + ":" + String(minute) + ":" + String(second));
 		runningTime = millis();
 	}
-	if (day>=1 and day<=5 and hour>=8 and hour<18) {
+	if (day>=1 and day<=5 and hour>=time_from and hour<time_to) {
 
 		workingTime = true;
 
