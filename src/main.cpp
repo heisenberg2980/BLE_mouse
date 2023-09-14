@@ -37,6 +37,8 @@ int hour;
 int minute;
 int second;
 bool workingTime = false;
+int time_from = 8; //Default value
+int time_to = 19; //Default value
 
 //BleMouse bleMouse;
 BleMouse bleMouse(deviceName " " room, deviceName " enterprise", 100);
@@ -282,6 +284,15 @@ void setup() {
   //init and get the time
   configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
   getTime();
+
+  if (room=="L") {
+    time_from = 8;
+    time_to = 19;
+  }
+  if (room=="O") {
+    time_from = 8;
+    time_to = 17;
+  }
 
 }
 
