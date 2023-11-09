@@ -289,7 +289,7 @@ void setup() {
 
   if (room=="L") {
     time_from = 8;
-    time_to = 19;
+    time_to = 22;
   }
   if (room=="O") {
     time_from = 8;
